@@ -506,7 +506,7 @@ public class TelescopeLayout extends FrameLayout {
                 } else {
                     EGL10 egl = (EGL10) EGLContext.getEGL();
                     GL10 gl = (GL10) egl.eglGetCurrentContext().getGL();
-                    screenshot = createBitmapFromGLSurface(0, 0, getMeasuredWidth(), getMeasuredHeight(), gl);
+                    screenshot = createBitmapFromGLSurface(0, 0, getWidth(), getHeight(), gl);
                 }
                 capturingEnd();
 
