@@ -47,6 +47,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+import javax.microedition.khronos.egl.EGL10;
+import javax.microedition.khronos.egl.EGLContext;
 import javax.microedition.khronos.opengles.GL10;
 
 import static android.Manifest.permission.VIBRATE;
@@ -502,6 +504,8 @@ public class TelescopeLayout extends FrameLayout {
                     screenshot = Bitmap.createBitmap(view.getDrawingCache());
                     view.setDrawingCacheEnabled(false);
                 } else {
+                    EGL10 egl = (EGL10) EGLContext.getEGL();
+                    GL10 gl = (GL10) egl.eglGetCurrentContext().getGL();
                     screenshot = createBitmapFromGLSurface(0, 0, getMeasuredWidth(), getMeasuredHeight(), gl);
                 }
                 capturingEnd();
@@ -755,6 +759,7 @@ public class TelescopeLayout extends FrameLayout {
                 }
             }
         } catch (GLException e) {
+            Log.e(TAG, "createBitmapFromGLSurface: " + e.getMessage(), e);
             return null;
         }
 
