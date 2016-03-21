@@ -19,6 +19,7 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.opengl.GLException;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Handler;
@@ -41,9 +42,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+
+import javax.microedition.khronos.opengles.GL10;
 
 import static android.Manifest.permission.VIBRATE;
 import static android.animation.ValueAnimator.AnimatorUpdateListener;
@@ -79,7 +83,7 @@ public class TelescopeLayout extends FrameLayout {
     private final Runnable trigger = new Runnable() {
         @Override
         public void run() {
-            trigger();
+            trigger(gl);
         }
     };
     private final IntentFilter requestCaptureFilter;
@@ -96,6 +100,7 @@ public class TelescopeLayout extends FrameLayout {
     private View screenshotTarget;
     private int pointerCount;
     private ScreenshotMode screenshotMode;
+    private GL10 gl;
     private boolean screenshotChildrenOnly;
     private boolean vibrate;
 
@@ -206,7 +211,7 @@ public class TelescopeLayout extends FrameLayout {
                     final MediaProjection mediaProjection =
                             projectionManager.getMediaProjection(resultCode, data);
                     if (mediaProjection == null) {
-                        captureCanvasScreenshot();
+                        captureCanvasScreenshot(gl);
                         return;
                     }
 
@@ -429,7 +434,7 @@ public class TelescopeLayout extends FrameLayout {
         handler.removeCallbacks(trigger);
     }
 
-    private void trigger() {
+    private void trigger(GL10 gl) {
         stop();
 
         if (vibrate && hasVibratePermission(getContext())) {
@@ -450,7 +455,7 @@ public class TelescopeLayout extends FrameLayout {
 
                 // System was requested but isn't supported. Fall through.
             case CANVAS:
-                captureCanvasScreenshot();
+                captureCanvasScreenshot(gl);
                 break;
             case NONE:
                 new SaveScreenshotTask(null).execute();
@@ -483,7 +488,7 @@ public class TelescopeLayout extends FrameLayout {
         }
     }
 
-    private void captureCanvasScreenshot() {
+    private void captureCanvasScreenshot(final GL10 gl) {
         capturingStart();
 
         // Wait for the next frame to be sure our progress bars are hidden.
@@ -491,10 +496,14 @@ public class TelescopeLayout extends FrameLayout {
             @Override
             public void run() {
                 Bitmap screenshot;
-                View view = getTargetView();
-                view.setDrawingCacheEnabled(true);
-                screenshot = Bitmap.createBitmap(view.getDrawingCache());
-                view.setDrawingCacheEnabled(false);
+                if (gl == null) {
+                    View view = getTargetView();
+                    view.setDrawingCacheEnabled(true);
+                    screenshot = Bitmap.createBitmap(view.getDrawingCache());
+                    view.setDrawingCacheEnabled(false);
+                } else {
+                    screenshot = createBitmapFromGLSurface(0, 0, getMeasuredWidth(), getMeasuredHeight(), gl);
+                }
                 capturingEnd();
 
                 checkLens();
@@ -558,6 +567,10 @@ public class TelescopeLayout extends FrameLayout {
 
     private static boolean hasVibratePermission(Context context) {
         return context.checkPermission(VIBRATE, Process.myPid(), Process.myUid()) == PERMISSION_GRANTED;
+    }
+
+    public void setGl(GL10 gl) {
+        this.gl = gl;
     }
 
     /**
@@ -698,7 +711,7 @@ public class TelescopeLayout extends FrameLayout {
                             post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    captureCanvasScreenshot();
+                                    captureCanvasScreenshot(gl);
                                 }
                             });
                         } finally {
@@ -719,4 +732,33 @@ public class TelescopeLayout extends FrameLayout {
             }
         });
     }
+
+    private Bitmap createBitmapFromGLSurface(int x, int y, int w, int h, GL10 gl)
+            throws OutOfMemoryError {
+        int bitmapBuffer[] = new int[w * h];
+        int bitmapSource[] = new int[w * h];
+        IntBuffer intBuffer = IntBuffer.wrap(bitmapBuffer);
+        intBuffer.position(0);
+
+        try {
+            gl.glReadPixels(x, y, w, h, GL10.GL_RGBA, GL10.GL_UNSIGNED_BYTE, intBuffer);
+            int offset1, offset2;
+            for (int i = 0; i < h; i++) {
+                offset1 = i * w;
+                offset2 = (h - i - 1) * w;
+                for (int j = 0; j < w; j++) {
+                    int texturePixel = bitmapBuffer[offset1 + j];
+                    int blue = (texturePixel >> 16) & 0xff;
+                    int red = (texturePixel << 16) & 0x00ff0000;
+                    int pixel = (texturePixel & 0xff00ff00) | red | blue;
+                    bitmapSource[offset2 + j] = pixel;
+                }
+            }
+        } catch (GLException e) {
+            return null;
+        }
+
+        return Bitmap.createBitmap(bitmapSource, w, h, Bitmap.Config.ARGB_8888);
+    }
+
 }
