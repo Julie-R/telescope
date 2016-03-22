@@ -65,8 +65,6 @@ import static com.mattprecious.telescope.Preconditions.checkNotNull;
  */
 public class TelescopeLayout extends FrameLayout {
     private static final String TAG = "Telescope";
-    private static final SimpleDateFormat SCREENSHOT_FILE_FORMAT =
-            new SimpleDateFormat("'telescope'-yyyy-MM-dd-HHmmss.'png'", Locale.US);
     private static final int PROGRESS_STROKE_DP = 4;
     private static final long CANCEL_DURATION_MS = 250;
     private static final long DONE_DURATION_MS = 1000;
@@ -77,6 +75,8 @@ public class TelescopeLayout extends FrameLayout {
     private static final int DEFAULT_PROGRESS_COLOR = 0xff2196f3;
 
     private static Handler backgroundHandler;
+    private static SimpleDateFormat screenshotFileFormat =
+            new SimpleDateFormat("'telescope'-yyyy-MM-dd-HHmmss.'png'", Locale.US);
 
     private final MediaProjectionManager projectionManager;
     private final WindowManager windowManager;
@@ -210,6 +210,15 @@ public class TelescopeLayout extends FrameLayout {
 
                     int resultCode = intent.getIntExtra(RequestCaptureActivity.RESULT_EXTRA_CODE,
                             Activity.RESULT_CANCELED);
+
+                    if (resultCode != Activity.RESULT_OK) {
+                        if (useTouchEvent) {
+                            progressAnimator.end();
+                            progressFraction = 0;
+                        }
+                        return;
+                    }
+
                     Intent data = intent.getParcelableExtra(RequestCaptureActivity.RESULT_EXTRA_DATA);
 
                     final MediaProjection mediaProjection =
@@ -376,6 +385,10 @@ public class TelescopeLayout extends FrameLayout {
         }
 
         return super.onTouchEvent(event);
+    }
+
+    public void setScreenshotFileFormatNamePrefix(String filename) {
+        screenshotFileFormat = new SimpleDateFormat("'"+filename+"'"+"-yyyy-MM-dd-HHmmss.'png'", Locale.US);
     }
 
     @Override
@@ -607,7 +620,7 @@ public class TelescopeLayout extends FrameLayout {
             try {
                 screenshotFolder.mkdirs();
 
-                File file = new File(screenshotFolder, SCREENSHOT_FILE_FORMAT.format(new Date()));
+                File file = new File(screenshotFolder, screenshotFileFormat.format(new Date()));
                 FileOutputStream out = new FileOutputStream(file);
 
                 screenshot.compress(Bitmap.CompressFormat.PNG, 100, out);
