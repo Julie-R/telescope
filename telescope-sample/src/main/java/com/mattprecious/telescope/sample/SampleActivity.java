@@ -37,6 +37,7 @@ public class SampleActivity extends AppCompatActivity {
     Adapter adapter = new Adapter(this);
     adapter.addView(R.layout.default_view, R.string.tab_default);
     adapter.addView(R.layout.device_info_view, R.string.tab_device_info);
+    adapter.addView(R.layout.click_listener_view, R.string.tab_click_listener);
     adapter.addView(R.layout.styled_view, R.string.tab_styled);
     adapter.addView(R.layout.children_only_view, R.string.tab_children_only);
     adapter.addView(R.layout.three_finger_view, R.string.tab_three_finger);

@@ -105,6 +105,7 @@ public class TelescopeLayout extends FrameLayout {
     private GL10 gl;
     private boolean screenshotChildrenOnly;
     private boolean vibrate;
+    private boolean useTouchEvent;
 
     // State.
     private float progressFraction;
@@ -141,6 +142,7 @@ public class TelescopeLayout extends FrameLayout {
         screenshotChildrenOnly =
                 a.getBoolean(R.styleable.telescope_TelescopeLayout_telescope_screenshotChildrenOnly, false);
         vibrate = a.getBoolean(R.styleable.telescope_TelescopeLayout_telescope_vibrate, true);
+        useTouchEvent = a.getBoolean(R.styleable.telescope_TelescopeLayout_telescope_useTouchEvent, true);
         a.recycle();
 
         progressPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -307,7 +309,7 @@ public class TelescopeLayout extends FrameLayout {
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
-        if (!isEnabled()) {
+        if (!isEnabled() || !useTouchEvent) {
             return false;
         }
 
@@ -330,7 +332,7 @@ public class TelescopeLayout extends FrameLayout {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (!isEnabled()) {
+        if (!isEnabled() || !useTouchEvent) {
             return false;
         }
 
@@ -436,8 +438,10 @@ public class TelescopeLayout extends FrameLayout {
         handler.removeCallbacks(trigger);
     }
 
-    private void trigger(GL10 gl) {
-        stop();
+    public void trigger(GL10 gl) {
+        if (useTouchEvent) {
+            stop();
+        }
 
         if (vibrate && hasVibratePermission(getContext())) {
             vibrator.vibrate(VIBRATION_DURATION_MS);
@@ -491,7 +495,9 @@ public class TelescopeLayout extends FrameLayout {
     }
 
     private void captureCanvasScreenshot(final GL10 gl) {
-        capturingStart();
+        if (useTouchEvent) {
+            capturingStart();
+        }
 
         // Wait for the next frame to be sure our progress bars are hidden.
         post(new Runnable() {
@@ -509,7 +515,6 @@ public class TelescopeLayout extends FrameLayout {
                     screenshot = createBitmapFromGLSurface(0, 0, getWidth(), getHeight(), gl);
                 }
                 capturingEnd();
-
                 checkLens();
                 lens.onCapture(screenshot, new BitmapProcessorListener() {
                     @Override
@@ -648,7 +653,9 @@ public class TelescopeLayout extends FrameLayout {
 
     @TargetApi(LOLLIPOP)
     private void captureNativeScreenshot(final MediaProjection projection) {
-        capturingStart();
+        if (useTouchEvent) {
+            capturingStart();
+        }
 
         // Wait for the next frame to be sure our progress bars are hidden.
         post(new Runnable() {

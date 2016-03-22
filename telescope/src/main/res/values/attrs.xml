@@ -10,5 +10,6 @@
     </attr>
     <attr name="telescope_screenshotChildrenOnly" format="boolean"/>
     <attr name="telescope_vibrate" format="boolean"/>
+    <attr name="telescope_useTouchEvent" format="boolean"/>
   </declare-styleable>
 </resources>

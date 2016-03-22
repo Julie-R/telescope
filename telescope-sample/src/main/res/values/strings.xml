@@ -4,6 +4,7 @@
 
   <string name="tab_default">Default</string>
   <string name="tab_device_info">Device Info</string>
+  <string name="tab_click_listener">Click listener</string>
   <string name="tab_styled">Styled</string>
   <string name="tab_children_only">Children Only</string>
   <string name="tab_three_finger">Three Finger</string>
@@ -42,6 +43,9 @@
   <string name="maps_three_finger_description">
     Google Maps use two-finger gestures for pan and zooming. Three-finger press is required for this
     example.
+  </string>
+  <string name="screenshot_click_listener_description">
+    Click here to take a screenshot.
   </string>
 
   <string name="attributions"><![CDATA[
