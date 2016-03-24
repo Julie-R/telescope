@@ -477,6 +477,14 @@ public class TelescopeLayout extends FrameLayout {
         }
     }
 
+    public void trigger(@NonNull Bitmap bitmap) {
+        if (vibrate && hasVibratePermission(getContext())) {
+            vibrator.vibrate(VIBRATION_DURATION_MS);
+        }
+
+        captureCanvasScreenshot(bitmap);
+    }
+
     private boolean windowHasSecureFlag() {
         // Find an activity.
         Context context = getContext();
@@ -515,6 +523,21 @@ public class TelescopeLayout extends FrameLayout {
                 screenshot = Bitmap.createBitmap(view.getDrawingCache());
                 view.setDrawingCacheEnabled(false);
                 capturingEnd();
+                checkLens();
+                lens.onCapture(screenshot, new BitmapProcessorListener() {
+                    @Override
+                    public void onBitmapReady(Bitmap screenshot) {
+                        new SaveScreenshotTask(screenshot).execute();
+                    }
+                });
+            }
+        });
+    }
+
+    private void captureCanvasScreenshot(@NonNull final Bitmap screenshot) {
+        post(new Runnable() {
+            @Override
+            public void run() {
                 checkLens();
                 lens.onCapture(screenshot, new BitmapProcessorListener() {
                     @Override
