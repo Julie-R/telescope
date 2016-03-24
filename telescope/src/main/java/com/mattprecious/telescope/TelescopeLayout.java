@@ -19,7 +19,6 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
-import android.opengl.GLException;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Handler;
@@ -42,14 +41,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-
-import javax.microedition.khronos.egl.EGL10;
-import javax.microedition.khronos.egl.EGLContext;
-import javax.microedition.khronos.opengles.GL10;
 
 import static android.Manifest.permission.VIBRATE;
 import static android.animation.ValueAnimator.AnimatorUpdateListener;
@@ -85,7 +79,7 @@ public class TelescopeLayout extends FrameLayout {
     private final Runnable trigger = new Runnable() {
         @Override
         public void run() {
-            trigger(gl);
+            trigger();
         }
     };
     private final IntentFilter requestCaptureFilter;
@@ -102,7 +96,6 @@ public class TelescopeLayout extends FrameLayout {
     private View screenshotTarget;
     private int pointerCount;
     private ScreenshotMode screenshotMode;
-    private GL10 gl;
     private boolean screenshotChildrenOnly;
     private boolean vibrate;
     private boolean useTouchEvent;
@@ -224,7 +217,7 @@ public class TelescopeLayout extends FrameLayout {
                     final MediaProjection mediaProjection =
                             projectionManager.getMediaProjection(resultCode, data);
                     if (mediaProjection == null) {
-                        captureCanvasScreenshot(gl);
+                        captureCanvasScreenshot();
                         return;
                     }
 
@@ -388,7 +381,7 @@ public class TelescopeLayout extends FrameLayout {
     }
 
     public void setScreenshotFileFormatNamePrefix(String filename) {
-        screenshotFileFormat = new SimpleDateFormat("'"+filename+"'"+"-yyyy-MM-dd-HHmmss.'png'", Locale.US);
+        screenshotFileFormat = new SimpleDateFormat("'" + filename + "'" + "-yyyy-MM-dd-HHmmss.'png'", Locale.US);
     }
 
     @Override
@@ -451,7 +444,7 @@ public class TelescopeLayout extends FrameLayout {
         handler.removeCallbacks(trigger);
     }
 
-    public void trigger(GL10 gl) {
+    public void trigger() {
         if (useTouchEvent) {
             stop();
         }
@@ -474,7 +467,7 @@ public class TelescopeLayout extends FrameLayout {
 
                 // System was requested but isn't supported. Fall through.
             case CANVAS:
-                captureCanvasScreenshot(gl);
+                captureCanvasScreenshot();
                 break;
             case NONE:
                 new SaveScreenshotTask(null).execute();
@@ -507,7 +500,7 @@ public class TelescopeLayout extends FrameLayout {
         }
     }
 
-    private void captureCanvasScreenshot(final GL10 gl) {
+    private void captureCanvasScreenshot() {
         if (useTouchEvent) {
             capturingStart();
         }
@@ -517,16 +510,10 @@ public class TelescopeLayout extends FrameLayout {
             @Override
             public void run() {
                 Bitmap screenshot;
-                if (gl == null) {
-                    View view = getTargetView();
-                    view.setDrawingCacheEnabled(true);
-                    screenshot = Bitmap.createBitmap(view.getDrawingCache());
-                    view.setDrawingCacheEnabled(false);
-                } else {
-                    EGL10 egl = (EGL10) EGLContext.getEGL();
-                    GL10 gl = (GL10) egl.eglGetCurrentContext().getGL();
-                    screenshot = createBitmapFromGLSurface(0, 0, getWidth(), getHeight(), gl);
-                }
+                View view = getTargetView();
+                view.setDrawingCacheEnabled(true);
+                screenshot = Bitmap.createBitmap(view.getDrawingCache());
+                view.setDrawingCacheEnabled(false);
                 capturingEnd();
                 checkLens();
                 lens.onCapture(screenshot, new BitmapProcessorListener() {
@@ -589,10 +576,6 @@ public class TelescopeLayout extends FrameLayout {
 
     private static boolean hasVibratePermission(Context context) {
         return context.checkPermission(VIBRATE, Process.myPid(), Process.myUid()) == PERMISSION_GRANTED;
-    }
-
-    public void setGl(GL10 gl) {
-        this.gl = gl;
     }
 
     /**
@@ -735,7 +718,7 @@ public class TelescopeLayout extends FrameLayout {
                             post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    captureCanvasScreenshot(gl);
+                                    captureCanvasScreenshot();
                                 }
                             });
                         } finally {
@@ -756,34 +739,4 @@ public class TelescopeLayout extends FrameLayout {
             }
         });
     }
-
-    private Bitmap createBitmapFromGLSurface(int x, int y, int w, int h, GL10 gl)
-            throws OutOfMemoryError {
-        int bitmapBuffer[] = new int[w * h];
-        int bitmapSource[] = new int[w * h];
-        IntBuffer intBuffer = IntBuffer.wrap(bitmapBuffer);
-        intBuffer.position(0);
-
-        try {
-            gl.glReadPixels(x, y, w, h, GL10.GL_RGBA, GL10.GL_UNSIGNED_BYTE, intBuffer);
-            int offset1, offset2;
-            for (int i = 0; i < h; i++) {
-                offset1 = i * w;
-                offset2 = (h - i - 1) * w;
-                for (int j = 0; j < w; j++) {
-                    int texturePixel = bitmapBuffer[offset1 + j];
-                    int blue = (texturePixel >> 16) & 0xff;
-                    int red = (texturePixel << 16) & 0x00ff0000;
-                    int pixel = (texturePixel & 0xff00ff00) | red | blue;
-                    bitmapSource[offset2 + j] = pixel;
-                }
-            }
-        } catch (GLException e) {
-            Log.e(TAG, "createBitmapFromGLSurface: " + e.getMessage(), e);
-            return null;
-        }
-
-        return Bitmap.createBitmap(bitmapSource, w, h, Bitmap.Config.ARGB_8888);
-    }
-
 }

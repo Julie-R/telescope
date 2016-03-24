@@ -33,7 +33,7 @@ public class SampleClickListenerEmailView extends FrameLayout {
         takeSnapshotTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                telescopeView.trigger(null);
+                telescopeView.trigger();
             }
         });
     }
