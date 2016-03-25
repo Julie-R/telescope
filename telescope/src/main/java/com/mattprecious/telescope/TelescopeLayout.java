@@ -425,6 +425,23 @@ public class TelescopeLayout extends FrameLayout {
         }
     }
 
+    /**
+     * Use this function to take a screenshot directly without using touch event
+     */
+    public void takeScreenshot() {
+        trigger();
+    }
+
+    /**
+     * Use this function to send a given screenshot
+     *
+     * @param screenshot    The screenshot to send
+     * @param showAnimation True if the doneAnimation should be displayed
+     */
+    public void sendScreenshot(@NonNull Bitmap screenshot, boolean showAnimation) {
+        trigger(screenshot, showAnimation);
+    }
+
     private void start() {
         pressing = true;
         progressAnimator.setFloatValues(progressFraction, 1);
@@ -444,7 +461,7 @@ public class TelescopeLayout extends FrameLayout {
         handler.removeCallbacks(trigger);
     }
 
-    public void trigger() {
+    private void trigger() {
         if (useTouchEvent) {
             stop();
         }
@@ -477,12 +494,12 @@ public class TelescopeLayout extends FrameLayout {
         }
     }
 
-    public void trigger(@NonNull Bitmap bitmap) {
+    private void trigger(@NonNull Bitmap bitmap, boolean showAnimation) {
         if (vibrate && hasVibratePermission(getContext())) {
             vibrator.vibrate(VIBRATION_DURATION_MS);
         }
 
-        captureCanvasScreenshot(bitmap);
+        captureCanvasScreenshot(bitmap, showAnimation);
     }
 
     private boolean windowHasSecureFlag() {
@@ -534,7 +551,10 @@ public class TelescopeLayout extends FrameLayout {
         });
     }
 
-    private void captureCanvasScreenshot(@NonNull final Bitmap screenshot) {
+    private void captureCanvasScreenshot(@NonNull final Bitmap screenshot, boolean showAnimation) {
+        if (showAnimation) {
+            capturingEnd();
+        }
         post(new Runnable() {
             @Override
             public void run() {
